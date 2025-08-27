@@ -365,57 +365,61 @@
   }
 
   /* Dark mode toggle */
+  // Only do darkmode work if we have a darkmode stylesheet
   const darkCss = document.querySelector('link[rel~="stylesheet"][href^="https://www.w3.org/StyleSheets/TR/2021/dark"]');
   if (darkCss) {
-    let colorScheme = localStorage.getItem("tr-theme") || "auto";
-    darkCss.media = "";
-    function updateTheme() {
-      colorScheme = localStorage.getItem("tr-theme") || "auto";
-      const browserDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-      const theme = colorScheme === "auto" ? (browserDarkMode ? "dark" : "light") : colorScheme;
-
-      darkCss.disabled = theme === "light";
-      document.body.classList.toggle("darkmode", theme === "dark")
+    // Grab the color-scheme meta, creating it if it doesn't exist.
+    let colorSchemeMeta = document.querySelector("meta[name='color-scheme']");
+    if(!colorSchemeMeta) {
+      colorSchemeMeta = document.createElement("meta");
+      colorSchemeMeta.setAttribute("name", "color-scheme");
+      document.head.appendChild(colorSchemeMeta);
     }
 
-    updateTheme();
-    const render = document.createElement("div");
-    function createOption(option) {
-      const checked = option === colorScheme;
-      return `
-        <label>
-          <input name="color-scheme" type="radio" value="${option}" ${checked ? "checked": ""}>
-          <span>${option}</span>
-        </label>
-      `.trim();
+    // Generate the theme toggler, add it to the TOC
+    function generateThemeToggle() {
+      function createOption(option) {
+        const checked = option === colorScheme;
+        return `
+          <label>
+            <input name="color-scheme" type="radio" value="${option}" ${checked ? "checked": ""}>
+            <span>${option}</span>
+          </label>
+        `.trim();
+      }
+      const render = document.createElement("div");
+      render.innerHTML = `
+        <a id="toc-theme-toggle" role="radiogroup" aria-label="Select a color scheme">
+          <span aria-hidden="true"><img src="https://www.w3.org/StyleSheets/TR/2021/logos/dark.svg" title="theme toggle icon" /></span>
+          <span>
+          ${["light", "dark", "auto"].map(createOption).join("")}
+          </span>
+        </a>
+      `;
+      return render.children[0];
     }
-    render.innerHTML = `
-      <a id="toc-theme-toggle" role="radiogroup" aria-label="Select a color scheme">
-        <span aria-hidden="true"><img src="https://www.w3.org/StyleSheets/TR/2021/logos/dark.svg" title="theme toggle icon" /></span>
-        <span>
-        ${["light", "dark", "auto"].map(createOption).join("")}
-        </span>
-      </a>
-    `;
+    const tocNav = document.querySelector('#toc-nav');
+    const themeToggle = generateThemeToggle(); 
+    tocNav.appendChild(themeToggle);
+
+    // Give the toggles behavior
     const changeListener = (event) => {
       const { value } = event.target;
-      const browserDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-      const theme = value === "auto" ? (browserDarkMode ? "dark" : "light") : value;
-
-      darkCss.disabled = theme === "light";
-      document.body.classList.toggle("darkmode", theme === "dark")
+      updateTheme(value);
       localStorage.setItem("tr-theme", value);
     };
-    render.querySelectorAll("input[type='radio']").forEach((input) => {
+    themeToggle.querySelectorAll("input[type='radio']").forEach((input) => {
       input.addEventListener("change", changeListener);
     });
 
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
-      updateTheme();
-    });
-
-    var tocNav = document.querySelector('#toc-nav');
-    tocNav.appendChild(...render.children);
+    // Finally, actually update the theme, and kick if off immediately.
+    function updateTheme(value) {
+      const colorSchemeValue = (value == "auto") ? "light dark" : value;
+      colorSchemeMeta.setAttribute("content", colorSchemeValue);
+      const radio = document.querySelector(`input[type=radio][value=${value}]`);
+      if(radio) radio.checked = true;
+    }
+    updateTheme(localStorage.getItem("tr-theme") || "auto");
   }
 
 })();

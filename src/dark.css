@@ -9,6 +9,8 @@
 
 /* In case a transparent-bg image doesn't expect to be on a dark bg,
    which is quite common in practice... */
+@media (prefers-color-scheme: dark) {
+
 img { background: white; }
 
 :root {
@@ -119,4 +121,5 @@ img { background: white; }
 	--outdated-shadow: red;
 
 	--editedrec-bg: darkorange;
+}
 }
